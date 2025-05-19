@@ -708,15 +708,20 @@ class DayBlock:
             float | None
         ) = -43214321.55  # dummy value to force a mis-match
         movement: float | None = None
+        last_value: float | None = None
         if self.lines is not None:
-            for line in self.lines:
-                transaction_lines.append(line)  # add the line to the transaction lines
-                if (
-                    line.value_transaction is not None
-                ):  # if there's a transaction value it must be the last line and can be submitted
-                    # number the transaction lines
-                    for index, line in enumerate(transaction_lines):
-                        line.line_number_transaction = index
+            for index, line in enumerate(self.lines):
+                if index == 0:
+                    transaction_lines.append(
+                        line
+                    )  # add the line to the transaction lines
+                    last_value = line.value_transaction
+                elif (
+                    line.type_transaction is not None and last_value is not None
+                ):  # if it's a new transaction line
+                    # number the current transaction lines
+                    for ix, ln in enumerate(transaction_lines):
+                        ln.line_number_transaction = ix
                     # add the transaction
                     self.transactions.append(
                         Transaction(
@@ -728,6 +733,31 @@ class DayBlock:
                     )
                     transaction_lines = []  # empty the transaction lines
                     transaction_number += 1  # increment the transaction number
+                    transaction_lines.append(
+                        line
+                    )  # add the line to the transaction lines
+                    last_value = line.value_transaction
+                else:
+                    transaction_lines.append(
+                        line
+                    )  # add the line to the transaction lines
+                    last_value = line.value_transaction
+                if index + 1 == len(
+                    self.lines
+                ):  # if this is the last line in the block
+                    # number the transaction lines
+                    for ix, ln in enumerate(transaction_lines):
+                        ln.line_number_transaction = ix
+                    # add the transaction
+                    self.transactions.append(
+                        Transaction(
+                            id_day_block=self.id,
+                            transaction_number=transaction_number,
+                            date_transaction=self.date,
+                            lines=transaction_lines,
+                        )
+                    )
+                    transaction_lines = []
 
         if self.closing_balance is not None and self.opening_balance is not None:
             movement = abs(
@@ -739,6 +769,7 @@ class DayBlock:
                 movement = movement * -1
         value_transactions = sum(transaction.value for transaction in self.transactions)
         if movement is not None and round(movement, 2) != round(value_transactions, 2):
+            # print("date: ", self.date)
             # re-evaluate polarity of transactions
             polarity_swaps = [
                 transaction
