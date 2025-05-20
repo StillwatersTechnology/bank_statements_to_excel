@@ -403,7 +403,7 @@ class Line:
                     float_last = float_last * -1
             else:
                 float_last = None
-            if float_last:
+            if float_last is not None:
                 if re.findall(CURRENCY_PATTERN, text_ntl):
                     float_ntl = float(text_ntl)
                 else:
