@@ -34,7 +34,7 @@ TRANSACTION_TYPES = [
     ("DR", "Debit"),
     ("TFR", "Transfer"),
 ]
-POLARITY_SWAPS_MAX_TRIES = 1000
+POLARITY_SWAPS_MAX_TRIES = 5000
 date_log: list[
     dict[str, Union[UUID, int, date]]
 ] = []  # a list to hold the dates by statment and sheet number, in order to reduce the risk of duplication and return the previous date if a sheet transaction block begins without one
