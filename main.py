@@ -35,15 +35,17 @@ TRANSACTION_TYPES = [
     ("TFR", "Transfer"),
 ]
 POLARITY_SWAPS_MAX_TRIES = 5000
+SPLITTER_LENGTH = 50
 date_log: list[
     dict[str, Union[UUID, int, date]]
 ] = []  # a list to hold the dates by statment and sheet number, in order to reduce the risk of duplication and return the previous date if a sheet transaction block begins without one
+report: list[tuple[str, str, str, float | None, float | None, bool]] = []
 
 
 def main():
-    print("*******************************************")
-    print("Welcome to the bank statement parser.")
-    print("*******************************************")
+    print_splitter()
+    print("Welcome to the bank statement parser")
+    print_splitter()
     print(
         "This program will parse your bank statement and extract the relevant transactions"
     )
@@ -54,7 +56,7 @@ def main():
         "The program will also create a CSV file and an Excel file with the extracted data"
     )
     print("The files will be saved in the relevant 'exports' directories")
-    print()
+    print_splitter()
 
     while True:
         user_input = (
@@ -87,23 +89,66 @@ def main():
             return
 
     for filename in files:
-        print()
+        print_splitter()
         print("processing... ", filename)
         stmt = Statement(f"statements/{filename}")
 
-        test_results = tests(stmt)
-        if test_results:
-            # statements.append(stmt)
-            print(f"Statement {stmt.id} passed all tests.")
-            prepare_export_data(stmt)
-        else:
-            raise Exception(
-                f"Statement {stmt.id} failed tests. This statement dated {stmt.statement_date_desc} is invalid."
+        if stmt.skipped:  # if the statement is skipped, don't bother testing it
+            print(
+                f"Statement {filename} for account: {stmt.account_number} has been skipped as it doesn't appear to contain any transactions. Please check the file for errors."
             )
+        else:
+            test_results = tests(stmt)
+            if test_results:
+                # statements.append(stmt)
+                print(
+                    f"Statement {filename} for account: {stmt.account_number} passed all tests."
+                )
+                prepare_export_data(stmt)
+            else:
+                raise Exception(
+                    f"Statement {stmt.id} failed tests. This statement dated {stmt.statement_date_desc} is invalid."
+                )
+        report.append(  # add the statement to the report
+            (
+                filename,
+                stmt.account_number,
+                stmt.sort_code,
+                stmt.opening_balance,
+                stmt.closing_balance,
+                stmt.skipped,
+            )
+        )
+    print_splitter()
     print("All statements processed.")
-    print("Creating CSV and Excel files...")
     # Create CSV and Excel files
-    export_data()
+    current_time = export_data()
+    print_splitter()
+    # Report generation
+    if not os.path.exists("reports"):
+        os.makedirs("reports")
+    df = pd.DataFrame(
+        report,
+        columns=[
+            "Filename",
+            "Account Number",
+            "Sort Code",
+            "Opening Balance",
+            "Closing Balance",
+            "Skipped",
+        ],
+    )
+    df.to_csv(f"reports/log_csv_{current_time}.csv", index=False)
+    df.to_excel(  # type: ignore
+        excel_writer=f"reports/log_excel_{current_time}.xlsx",
+        index=False,
+    )
+    print(
+        f"Please check the logs!: CSV and Excel files created in the logs directory with the current date and time: {current_time}\n"
+        f"The CSV file is named 'log_csv_{current_time}.csv' and the Excel file is named 'log_excel_{current_time}.xlsx'\n"
+        f"The number of files processed should match the number of files in the statements directory.  A file may be skipped if it doesn't contain any transactions."
+    )
+    print_splitter()
 
 
 class Statement:
@@ -155,11 +200,29 @@ class Statement:
         self.closing_balance: float | None = None
         self.payments_in: float | None = None
         self.payments_out: float | None = None
+        self.skipped: bool = False
         self._extract_text()
         self._extract_account_info()
         self._extract_blalance_and_payment_info()
         self._get_statement_dates()
-        self.statement_date_desc: str = f"{self.statement_date_from:{DATE_FORMAT_DESC}} to {self.statement_date_to:{DATE_FORMAT_DESC}}"
+        self._check_for_skipped()
+        self.statement_date_desc: str = (
+            "<file skipped>"
+            if self.skipped
+            else f"{self.statement_date_from:{DATE_FORMAT_DESC}} to {self.statement_date_to:{DATE_FORMAT_DESC}}"
+        )  # human-readable description of the statement period
+
+    def _check_for_skipped(self):
+        """
+        Check if the statement contains pages and transaction blocks.
+        If not, flag the statement as skipped.
+        """
+        if len(self.pages) == 0:
+            self.skipped = True
+        else:
+            if not any(page.transaction_block for page in self.pages):
+                # if there are no transaction blocks, skip the statement
+                self.skipped = True
 
     def _get_statement_dates(self):
         start_date = next(
@@ -799,6 +862,13 @@ class DayBlock:
                 print(value_transactions, movement)
                 raise Exception(f"cannot balance transactions for {self}")
 
+        # calculate the opening_balance and closing_balance of the transactions based on their value movement from the opening_balance of the day block
+        running_balance: float = self.opening_balance if self.opening_balance else 0.0
+        for transaction in self.transactions:
+            transaction.opening_balance = running_balance
+            running_balance += transaction.value
+            transaction.closing_balance = running_balance
+
 
 class Transaction:
     """
@@ -841,6 +911,8 @@ class Transaction:
         self.description: str = "<no description>"
         self.description_long: str = "<not description>"
         self._extract_info()
+        self.opening_balance: float = 0.0
+        self.closing_balance: float = 0.0
 
     def __repr__(self):
         return f"transaction: {self.id}; day_block: {self.id_day_block}; tr_number: {self.transaction_number}; date: {self.date_transaction}; type: {self.type_transaction}; description: {self.description}; value: {self.value}; value_alt: {self.value_alt}"
@@ -968,7 +1040,7 @@ def tests(statement: Statement) -> bool:
         for page in statement.pages
         if page.transaction_block is not None
     )
-    print("--------------------------------------------------------")
+    print_splitter()
     print("TEST RESULTS - balance movements")
     print("Statement: ", round(movement_statement, 2))
     print("Page Transaction Blocks: ", round(movement_transaction_blocks, 2))
@@ -1006,7 +1078,9 @@ class ExportColumns:
     credit_debit: str
     description: str
     description_long: str
+    opening_balance: float
     value: float
+    closing_balance: float
 
 
 data_instances: list[ExportColumns] = []
@@ -1027,15 +1101,16 @@ def prepare_export_data(stmt: Statement):
                             statement_date=stmt.statement_date_desc,
                             page_number=page.page_number
                             + 1,  # page number is zero indexed
-                            sheet_number=page.sheet_number
-                            + 1,  # sheet number is zero indexed
+                            sheet_number=page.sheet_number,
                             id_transaction=transaction.id,
                             date_transaction=transaction.date_transaction,
                             type_transaction=transaction.type_transaction,
                             credit_debit="Credit" if transaction.value > 0 else "Debit",
                             description=transaction.description,
                             description_long=transaction.description_long,
+                            opening_balance=transaction.opening_balance,
                             value=transaction.value,
+                            closing_balance=transaction.closing_balance,
                             transaction_number=transaction.transaction_number
                             + 1,  # transaction number is zero indexed
                         )
@@ -1050,10 +1125,32 @@ def export_data():
     if not os.path.exists("exports_excel"):
         os.makedirs("exports_excel")
     # Export to CSV and Excel
-    df: pd.DataFrame = pd.DataFrame(data_instances)
-    df.to_csv("exports_csv/bank_transactions.csv", index=False)
-    df.to_excel(excel_writer="exports_excel/bank_transactions.xlsx", index=False)  # type: ignore
+    if len(data_instances) == 0:
+        print("No data to export")
+        return
+    else:
+        print(
+            "Combining statements and exporting to CSV and Excel files in the relevant export folders"
+        )
+        current_time: str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        df: pd.DataFrame = pd.DataFrame(data_instances)
+        df.to_csv(f"exports_csv/bank_transactions_{current_time}.csv", index=False)
+        df.to_excel(  # type: ignore
+            excel_writer=f"exports_excel/bank_transactions_{current_time}.xlsx",
+            index=False,
+        )
+        print(
+            f"Exported transactions to CSV and Excel files with timestamp: {current_time}. You can find them in the 'exports_csv' and 'exports_excel' folders."
+        )
+    return current_time
+
+
+def print_splitter():
+    print()
+    print(f"{''.join(['-' for _ in range(SPLITTER_LENGTH)])}")
+    print()
 
 
 if __name__ == "__main__":
     main()
+    # Run the main function to process the bank statements
