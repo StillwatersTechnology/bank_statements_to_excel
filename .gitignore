@@ -11,15 +11,16 @@ wheels/
 
 # Export folders
 exports_csv/*
-exports_csv/.gitkeep
+!exports_csv/.gitkeep
 exports_excel/*
-exports_excel/.gitkeep
+!exports_excel/.gitkeep
 exports_db/*
-exports_db/.gitkeep
+!exports_db/.gitkeep
 
 # Reports folder
-reports/*
 logs/*
+!logs/.gitkeep
 
 # statements folder
-statements/
+statements/*
+!statements/.gitkeep

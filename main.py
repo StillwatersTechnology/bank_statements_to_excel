@@ -125,8 +125,8 @@ def main():
     current_time = export_data()
     print_splitter()
     # Report generation
-    if not os.path.exists("reports"):
-        os.makedirs("reports")
+    if not os.path.exists("logs"):
+        os.makedirs("logs")
     df = pd.DataFrame(
         report,
         columns=[
@@ -138,9 +138,9 @@ def main():
             "Skipped",
         ],
     )
-    df.to_csv(f"reports/log_csv_{current_time}.csv", index=False)
+    df.to_csv(f"logs/log_csv_{current_time}.csv", index=False)
     df.to_excel(  # type: ignore
-        excel_writer=f"reports/log_excel_{current_time}.xlsx",
+        excel_writer=f"logs/log_excel_{current_time}.xlsx",
         index=False,
     )
     print(
