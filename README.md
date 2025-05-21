@@ -76,20 +76,6 @@ uv sync
 
 ## Usage
 
-```bash
-python convert.py --input statement.pdf --output transactions.xlsx
-```
-
-### Options
-
-- `--input`: Path to your PDF bank statement.
-- `--output`: Desired Excel output file.
-
-## Example
-
-```bash
-python convert.py --input mybank.pdf --output mybank.xlsx
-```
 
 ## Requirements
 
@@ -101,6 +87,7 @@ python convert.py --input mybank.pdf --output mybank.xlsx
 
 - We only have access to our own statements for testing so there could be format or transaction types that we have missed.  Please let us know if you experience issues and we'll contact you and try to resolve the issue.
 - Only supports English-language statements by default.
+- If a bank makes fundamental changes to the format of their pdf statements then this will break...  but we will try to mend it!
 
 ## Contributing
 
