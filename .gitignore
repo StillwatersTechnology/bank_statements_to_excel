@@ -10,12 +10,13 @@ wheels/
 .venv
 
 # Export folders
-exports_csv/
-exports_excel/
+exports_csv/*
+exports_excel/*
+exports_db/*
 
 # Reports folder
-reports/
-logs/
+reports/*
+logs/*
 
 # statements folder
 statements/
