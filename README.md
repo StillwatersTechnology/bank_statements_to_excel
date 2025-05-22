@@ -63,7 +63,7 @@ Or, if you have git installed, clone the repository using the below command:
     
 ```bash
 git clone https://github.com/StillwatersTechnology/bank_statements_to_excel.git
-cd bank-pdf-to-excel
+cd bank-statements-to-excel
 ```
 
 ### Step 3 - Set up your environment and install dependencies
