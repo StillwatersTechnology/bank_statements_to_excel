@@ -21,7 +21,7 @@ CLOSING_BALANCE_LINE = "ClosingBalance"  # closing balance line
 BBF_LINE = "BALANCEBROUGHTFORWARD"  # balance brought forward line
 BCF_LINE = "BALANCECARRIEDFORWARD"  # balance carried forward line
 DATE_FORMAT = "%d %b %y"
-DATE_FORMAT_DESC = "%-d %B %Y"
+DATE_FORMAT_DESC = "%d %B %Y"
 CURRENCY_PATTERN = r"(^\d+)(\.{1})(\d{2})$"
 TRANSACTION_TYPES = [
     ("BP", "Bill Payment"),
