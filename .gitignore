@@ -9,6 +9,9 @@ wheels/
 # Virtual environments
 .venv
 
+# UV files
+.python-version
+
 # Export folders
 exports_csv/*
 !exports_csv/.gitkeep
