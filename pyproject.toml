@@ -1,7 +1,7 @@
 [project]
-name = "banking"
+name = "Bank Statements to Excel"
 version = "0.1.0"
-description = "Add your description here"
+description = "Convert your bank statement PDFs into clean, structured Excel or CSV files with ease"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [

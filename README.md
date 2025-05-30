@@ -79,7 +79,7 @@ uv self update
 uv sync
 ```
 
-If you're not using uv you'll need a python version of >= 3.10.  You can create your own virtual environment and use 'pip install' to set up your environment using the requirements.txt file.
+If you're not using uv you'll need a python version of >= 3.13.  You can create your own virtual environment and use 'pip install' to set up your environment using the requirements.txt file.
 From within the bank_statements_to_excel you can run:
 
 ```bash
@@ -110,19 +110,22 @@ Once complete, you'll be prompted to locate your Excel and CSV files in the appr
 
 ## Issues
 
-If you have any problems, please check that the bank statements you are using is listed within the 'Supported' list at the top of this README file.  If you are using a supported statement, please open an issue here: https://github.com/StillwatersTechnology/bank_statements_to_excel/issues
+If you have any problems, please check that the bank statements you are using is listed within the [Compatible Statements](#compatible-statements) list at the top of this README file.  If you are using a supported statement, please open an issue here: https://github.com/StillwatersTechnology/bank_statements_to_excel/issues
 
 Please give as much information as possible, but be careful not to divulge any personal information such as bank account numbers or your personal address - please don't upload or attach your bank statement! 
 
-One possible cause of failure may be a transaction type that isn't listed in 'TRANSACTION_TYPES' towards the top of the main.py file.  If there's a transaction type on your statement that isn't listed, let us know in your issue and we'll add it.  You can also try adding it yourself to see if it solves the problem, and submit a pull request if you like.
+One possible cause of failure may be a transaction type that isn't listed in 'TRANSACTION_TYPES' in the [transaction_types.py](modules/transaction_types.py) file.  If there's a transaction type on your statement that isn't listed, let us know in your issue and we'll add it.  You can also try adding it yourself to see if it solves the problem, and submit a pull request if you like.
 
 Another possible point of failure may be overseas transactions, as these may list values in multiple currencies.  If there are any of these you can let us know the currency and the basic format of the transaction on your statement.
 
 ## Requirements
 
-- Python 3.10+
-- See `requirements.txt` for dependencies
+- Python 3.13+
+- See [requirements.txt](requirements.txt) or [pyproject.toml](pyproject.toml) for dependencies. Alternatively, if you're using uv, you can run:
 
+```bash
+uv tree
+```
 
 ## Limitations
 
