@@ -1,4 +1,3 @@
-import os
 from dataclasses import dataclass
 from datetime import date, datetime
 from uuid import UUID
@@ -6,6 +5,7 @@ from uuid import UUID
 import pandas as pd
 
 from .classes import Statement
+from .constants import EXPORT_CSV_DIRECTORY, EXPORT_EXCEL_DIRECTORY
 
 
 @dataclass
@@ -59,8 +59,7 @@ def prepare_export_data(stmt: Statement):
                             account_name=stmt.account_name,
                             account=stmt.sort_code + " " + stmt.account_number,
                             statement_date=stmt.statement_date_desc,
-                            page_number=page.page_number
-                            + 1,  # page number is zero indexed
+                            page_number=page.page_number + 1,  # page number is zero indexed
                             sheet_number=page.sheet_number,
                             id_transaction=transaction.id,
                             date_transaction=transaction.date_transaction,
@@ -71,8 +70,7 @@ def prepare_export_data(stmt: Statement):
                             opening_balance=transaction.opening_balance,
                             value=transaction.value,
                             closing_balance=transaction.closing_balance,
-                            transaction_number=transaction.transaction_number
-                            + 1,  # transaction number is zero indexed
+                            transaction_number=transaction.transaction_number + 1,  # transaction number is zero indexed
                         )
                     )
 
@@ -93,27 +91,21 @@ def export_data():
     Returns:
         str: The timestamp used in the exported filenames, or None if no data was exported.
     """
-    # Export the data to CSV and Excel files
-    if not os.path.exists("exports_csv"):
-        os.makedirs("exports_csv")
-    if not os.path.exists("exports_excel"):
-        os.makedirs("exports_excel")
     # Export to CSV and Excel
     if len(data_instances) == 0:
         print("No data to export")
         return
     else:
-        print(
-            "Combining statements and exporting to CSV and Excel files in the relevant export folders"
-        )
+        print("Combining statements and exporting to CSV and Excel files in the relevant export folders")
         current_time: str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         df: pd.DataFrame = pd.DataFrame(data_instances)
-        df.to_csv(f"exports_csv/bank_transactions_{current_time}.csv", index=False)
+        df.to_csv(f"{EXPORT_CSV_DIRECTORY}/bank_transactions_{current_time}.csv", index=False)
         df.to_excel(  # type: ignore
-            excel_writer=f"exports_excel/bank_transactions_{current_time}.xlsx",
+            excel_writer=f"{EXPORT_EXCEL_DIRECTORY}/bank_transactions_{current_time}.xlsx",
             index=False,
         )
         print(
-            f"Exported transactions to CSV and Excel files with timestamp: {current_time}. You can find them in the 'exports_csv' and 'exports_excel' folders."
+            f"Exported transactions to CSV and Excel files with timestamp: {current_time}. "
+            f"You can find them in the '{EXPORT_CSV_DIRECTORY}' and '{EXPORT_EXCEL_DIRECTORY}' folders."
         )
     return current_time

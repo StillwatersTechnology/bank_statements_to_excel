@@ -96,19 +96,11 @@ class Statement:
         If both dates are found, sets `self.statement_date_from` to one day after the start date and `self.statement_date_to` to the end date.
         """
         start_date = next(
-            (
-                page.transaction_block.date_bbf
-                for page in self.pages
-                if page.transaction_block and page.transaction_block.is_first
-            ),
+            (page.transaction_block.date_bbf for page in self.pages if page.transaction_block and page.transaction_block.is_first),
             None,
         )
         end_date = next(
-            (
-                page.transaction_block.date_bcf
-                for page in self.pages
-                if page.transaction_block and page.transaction_block.is_last
-            ),
+            (page.transaction_block.date_bcf for page in self.pages if page.transaction_block and page.transaction_block.is_last),
             None,
         )
         if start_date and end_date:
@@ -128,47 +120,27 @@ class Statement:
             self.closing_balance (float): The extracted closing balance, negative if marked as debit.
         """
         for line in self.pages[0].lines:
-            if OPENING_BALANCE_LINE in line.text:
+            if OPENING_BALANCE_LINE in line.text or str(OPENING_BALANCE_LINE).replace(" ", "") in line.text:
                 debit_flag: bool = False
                 if line.text.split()[-1] == "D":
                     debit_flag = True
                     line.text = line.text.replace("D", "")
                 self.opening_balance = float(
-                    str(line.text.split()[-1])
-                    .replace(",", "")
-                    .replace("£", "")
-                    .replace("$", "")
-                    .replace("EUR", "")
+                    str(line.text.split()[-1]).replace(",", "").replace("£", "").replace("$", "").replace("EUR", "")
                 )
                 if debit_flag:
                     self.opening_balance = self.opening_balance * -1
-            elif PAYMENTS_IN_LINE in line.text:
-                self.payments_in = float(
-                    str(line.text.split()[-1])
-                    .replace(",", "")
-                    .replace("£", "")
-                    .replace("$", "")
-                    .replace("EUR", "")
-                )
-            elif PAYMENTS_OUT_LINE in line.text:
-                self.payments_out = float(
-                    str(line.text.split()[-1])
-                    .replace(",", "")
-                    .replace("£", "")
-                    .replace("$", "")
-                    .replace("EUR", "")
-                )
-            elif CLOSING_BALANCE_LINE in line.text:
+            elif PAYMENTS_IN_LINE in line.text or str(PAYMENTS_IN_LINE).replace(" ", "") in line.text:
+                self.payments_in = float(str(line.text.split()[-1]).replace(",", "").replace("£", "").replace("$", "").replace("EUR", ""))
+            elif PAYMENTS_OUT_LINE in line.text or str(PAYMENTS_OUT_LINE).replace(" ", "") in line.text:
+                self.payments_out = float(str(line.text.split()[-1]).replace(",", "").replace("£", "").replace("$", "").replace("EUR", ""))
+            elif CLOSING_BALANCE_LINE in line.text or str(CLOSING_BALANCE_LINE).replace(" ", "") in line.text:
                 debit_flag: bool = False
                 if line.text.split()[-1] == "D":
                     debit_flag = True
                     line.text = line.text.replace("D", "")
                 self.closing_balance = float(
-                    str(line.text.split()[-1])
-                    .replace(",", "")
-                    .replace("£", "")
-                    .replace("$", "")
-                    .replace("EUR", "")
+                    str(line.text.split()[-1]).replace(",", "").replace("£", "").replace("$", "").replace("EUR", "")
                 )
                 if debit_flag:
                     self.closing_balance = self.closing_balance * -1
@@ -191,11 +163,7 @@ class Statement:
             self.account_number (str): The extracted account number.
         """
         account_info_line = next(
-            (
-                line.line_number_page
-                for line in self.pages[0].lines
-                if ACCOUNT_INFO_HEADER in line.text
-            ),
+            (line.line_number_page for line in self.pages[0].lines if ACCOUNT_INFO_HEADER in line.text),
             None,
         )
         if account_info_line is not None:
@@ -227,9 +195,7 @@ class Statement:
                 for page in pdf.pages:
                     text = page.extract_text()
                     if text:
-                        self.pages.append(
-                            Page(page.page_number - 1, text, self.id)
-                        )  # page number reduced by 1 to make it zero indexed
+                        self.pages.append(Page(page.page_number - 1, text, self.id))  # page number reduced by 1 to make it zero indexed
         except Exception as e:
             print(f"Error opening or processing PDF file '{self.filename}': {e}")
 
@@ -267,6 +233,7 @@ class Page:
         self.page_number: int = page_number
         self.text: str = text
         self.sheet_number: int = -1  # dummy sheet number
+        self.account_info_line: int = 999  # default value, will be set if account info is found
         self.lines: list[Line] = []
         self.transaction_block: TransactionBlock | None = None
         self._extract_lines()
@@ -318,18 +285,12 @@ class Page:
         Raises:
             - ValueError: If the extracted sheet number cannot be converted to an integer.
         """
-        account_info_line = next(
-            (
-                line.line_number_page
-                for line in self.lines
-                if ACCOUNT_INFO_HEADER in line.text
-            ),
+        self.account_info_line = next(
+            (line.line_number_page for line in self.lines if ACCOUNT_INFO_HEADER in line.text),
             None,
         )
-        if account_info_line is not None:
-            account_info = self.lines[
-                account_info_line + 1
-            ].text  # info is 1 line beneath the header
+        if self.account_info_line is not None:
+            account_info = self.lines[self.account_info_line + 1].text  # info is 1 line beneath the header
             account_info_parts = account_info.split()
             if len(account_info_parts) >= 4:
                 # the final part of the line is the sheet number
@@ -379,7 +340,12 @@ class Line:
         self._extract_info()
 
     def __repr__(self):
-        return f"{self.line_number_transaction_block}: {self.text} --- date: {self.date}, type_transaction: {self.type_transaction}, text_transaction: {self.text_transaction}, value_transaction: {self.value_transaction}, balance: {self.balance}, line_number_transaction: {self.line_number_transaction}"
+        return (
+            f"{self.line_number_page}.{self.line_number_transaction_block}: {self.text} --- date: {self.date}, "
+            f"type_transaction: {self.type_transaction}, text_transaction: {self.text_transaction}, "
+            f"value_transaction: {self.value_transaction}, balance: {self.balance}, "
+            f"line_number_transaction: {self.line_number_transaction}"
+        )
 
     def _extract_info(self):
         """
@@ -438,10 +404,7 @@ class Line:
                 possible_type_transaction = text_parts[3]
             elif len(text_parts) > 0:
                 possible_type_transaction = text_parts[0]
-            if (
-                possible_type_transaction is not None
-                and possible_type_transaction in valid_types
-            ):
+            if possible_type_transaction is not None and possible_type_transaction in valid_types:
                 self.type_transaction = possible_type_transaction
 
         # set the narrative
@@ -451,8 +414,6 @@ class Line:
             start_point += 3
         if self.type_transaction is not None:
             start_point += 1
-        if debit_flag:
-            end_point -= 1
         if self.balance is not None:
             end_point -= 1
         if self.value_transaction is not None:
@@ -506,12 +467,8 @@ class TransactionBlock:
         self.end_line: int | None = 0
         self.is_first: bool = False
         self.is_last: bool = False
-        self.date_bbf: date | None = (
-            None  # the date of the balance brought forward (if first transaction block)
-        )
-        self.date_bcf: date | None = (
-            None  # the date of the balance carried forward (if last transaction block)
-        )
+        self.date_bbf: date | None = None  # the date of the balance brought forward (if first transaction block)
+        self.date_bcf: date | None = None  # the date of the balance carried forward (if last transaction block)
         self._extract_info()
         self.lines: list[Line] | None = None
         self._get_lines()
@@ -545,28 +502,16 @@ class TransactionBlock:
 
         if self.lines is not None:
             for line in self.lines:
-                if (
-                    line.line_number_page == self.start_line
-                ):  # first line is always the start of the first day block
+                if line.line_number_page == self.start_line:  # first line is always the start of the first day block
                     day_block_lines.append(line)  # add the line to the day block
-                    opening_balance = (
-                        self.opening_balance
-                    )  # set the opening balance to that of the transaction block
-                    if (
-                        line.date is None
-                    ):  # if the first line doesn't have a date it must take the last date from the previous sheet
-                        block_date = last_date_from_previous_sheet(
-                            self.page.id_statement, self.page.sheet_number
-                        )
+                    opening_balance = self.opening_balance  # set the opening balance to that of the transaction block
+                    if line.date is None:  # if the first line doesn't have a date it must take the last date from the previous sheet
+                        block_date = last_date_from_previous_sheet(self.page.id_statement, self.page.sheet_number)
                     else:
                         block_date = line.date
-                elif (
-                    line.date is not None
-                ):  # a date on any other line signals the start of a new day block
+                elif line.date is not None:  # a date on any other line signals the start of a new day block
                     day_block_number += 1  # increment day block number
-                    block_date = (
-                        line.date
-                    )  # set the block date to that of the current line
+                    block_date = line.date  # set the block date to that of the current line
                     day_block_lines = []  # empty current day block lines
                     day_block_lines.append(line)
                 else:  # the line is added to the current day block
@@ -599,9 +544,7 @@ class TransactionBlock:
                             "date": block_date,
                         }
                     )
-                    opening_balance = float(
-                        closing_balance
-                    )  # the closing balance becomes the opening balance for the next day block
+                    opening_balance = float(closing_balance)  # the closing balance becomes the opening balance for the next day block
                     # except Exception:
                     #     Exception(
                     #         f"Error adding day block for statement: {self.page.id_statement}; sheet: {self.page.sheet_number}; date: {block_date}"
@@ -621,13 +564,9 @@ class TransactionBlock:
               `self.start_line`.
         """
         if self.start_line is not None and self.end_line is not None:
-            self.lines = [
-                line for line in self.page.lines[self.start_line : self.end_line + 1]
-            ]
+            self.lines = [line for line in self.page.lines[self.start_line : self.end_line + 1]]
             for line in self.lines:
-                line.line_number_transaction_block = (
-                    line.line_number_page - self.start_line
-                )
+                line.line_number_transaction_block = line.line_number_page - self.start_line
 
     def _extract_info(self):
         """
@@ -655,23 +594,19 @@ class TransactionBlock:
             (
                 line.line_number_page + 1
                 for line in self.page.lines
-                if BBF_LINE in line.text
+                if BBF_LINE in line.text or str(BBF_LINE).replace(" ", "") in line.text
             ),  # block starts 1 line after the bbf line
             None,
         )
         if self.start_line is not None:
-            bbf_text = self.page.lines[
-                self.start_line - 1
-            ].text  # balance brought forward is one line before the block start line
+            bbf_text = self.page.lines[self.start_line - 1].text  # balance brought forward is one line before the block start line
             bbf_parts = bbf_text.split()
             if len(bbf_parts) >= 1:
                 debit_flag: bool = False
                 if bbf_parts[-1] == "D":
                     debit_flag = True
                     bbf_parts.pop()
-                self.opening_balance = float(
-                    str(bbf_parts.pop().strip()).replace(",", "")
-                )
+                self.opening_balance = float(str(bbf_parts.pop().strip()).replace(",", ""))
                 if debit_flag:
                     self.opening_balance = self.opening_balance * -1
             if len(bbf_parts) >= 3:
@@ -684,30 +619,22 @@ class TransactionBlock:
             (
                 line.line_number_page - 1
                 for line in self.page.lines
-                if BCF_LINE in line.text
+                if BCF_LINE in line.text or str(BCF_LINE).replace(" ", "") in line.text
             ),  # block ends 1 line before the bcf line
             None,
         )
         if self.end_line is not None:
-            bcf_text = self.page.lines[
-                self.end_line + 1
-            ].text  # balance carried forward is one line after the block end
+            bcf_text = self.page.lines[self.end_line + 1].text  # balance carried forward is one line after the block end
             bcf_parts = bcf_text.split()
             if len(bcf_parts) >= 1:
                 debit_flag: bool = False
-                if (
-                    bcf_parts[-1] == "D"
-                ):  # if the last part of the line is a D then the closing balance is negative
+                if bcf_parts[-1] == "D":  # if the last part of the line is a D then the closing balance is negative
                     debit_flag = True
                     bcf_parts.pop()
-                self.closing_balance = float(
-                    str(bcf_parts.pop().strip()).replace(",", "")
-                )
+                self.closing_balance = float(str(bcf_parts.pop().strip()).replace(",", ""))
                 if debit_flag:
                     self.closing_balance = self.closing_balance * -1
-            if (
-                len(bcf_parts) >= 3
-            ):  # if there are at least 3 parts to the line then the date is in the first 3 parts
+            if len(bcf_parts) >= 3:  # if there are at least 3 parts to the line then the date is in the first 3 parts
                 date_str = " ".join(bcf_parts[:3])
                 self.date_bcf = make_date(date_str)
                 self.is_last = True
@@ -772,21 +699,15 @@ class DayBlock:
         """
         transaction_number: int = 0
         transaction_lines: list[Line] = []
-        value_transactions: (
-            float | None
-        ) = -43214321.55  # dummy value to force a mis-match
+        value_transactions: float | None = -43214321.55  # dummy value to force a mis-match
         movement: float | None = None
         last_value: float | None = None
         if self.lines is not None:
             for index, line in enumerate(self.lines):
                 if index == 0:
-                    transaction_lines.append(
-                        line
-                    )  # add the line to the transaction lines
+                    transaction_lines.append(line)  # add the line to the transaction lines
                     last_value = line.value_transaction
-                elif (
-                    line.type_transaction is not None and last_value is not None
-                ):  # if it's a new transaction line
+                elif line.type_transaction is not None and last_value is not None:  # if it's a new transaction line
                     # number the current transaction lines
                     for ix, ln in enumerate(transaction_lines):
                         ln.line_number_transaction = ix
@@ -801,18 +722,12 @@ class DayBlock:
                     )
                     transaction_lines = []  # empty the transaction lines
                     transaction_number += 1  # increment the transaction number
-                    transaction_lines.append(
-                        line
-                    )  # add the line to the transaction lines
+                    transaction_lines.append(line)  # add the line to the transaction lines
                     last_value = line.value_transaction
                 else:
-                    transaction_lines.append(
-                        line
-                    )  # add the line to the transaction lines
+                    transaction_lines.append(line)  # add the line to the transaction lines
                     last_value = line.value_transaction
-                if index + 1 == len(
-                    self.lines
-                ):  # if this is the last line in the block
+                if index + 1 == len(self.lines):  # if this is the last line in the block
                     # number the transaction lines
                     for ix, ln in enumerate(transaction_lines):
                         ln.line_number_transaction = ix
@@ -839,15 +754,9 @@ class DayBlock:
         if movement is not None and round(movement, 2) != round(value_transactions, 2):
             # print("date: ", self.date)
             # re-evaluate polarity of transactions
-            polarity_swaps = [
-                transaction
-                for transaction in self.transactions
-                if transaction.value_alt is not None
-            ]
+            polarity_swaps = [transaction for transaction in self.transactions if transaction.value_alt is not None]
             for _ in range(POLARITY_SWAPS_MAX_TRIES):
-                swap_int = randint(
-                    0, len(polarity_swaps) - 1
-                )  # randomly select a candidate to swap
+                swap_int = randint(0, len(polarity_swaps) - 1)  # randomly select a candidate to swap
                 swap = polarity_swaps[swap_int]
                 alt_val = swap.value_alt
                 swap.value_alt = swap.value
@@ -858,9 +767,7 @@ class DayBlock:
                     #     print(self.transactions)
                     break
 
-            value_transactions = sum(
-                transaction.value for transaction in self.transactions
-            )
+            value_transactions = sum(transaction.value for transaction in self.transactions)
             if round(value_transactions, 2) != round(movement, 2):
                 for t in self.transactions:
                     print(t)
@@ -912,9 +819,7 @@ class Transaction:
         self.lines: list[Line] = lines
         self.type_transaction: str = "<no type>"
         self.value: float = -9999.88  # dummy value to force a mis-match
-        self.value_alt: float | None = (
-            None  # if unsure of the polarity we hold the negative here for testing within the day block
-        )
+        self.value_alt: float | None = None  # if unsure of the polarity we hold the negative here for testing within the day block
         self.description: str = "<no description>"
         self.description_long: str = "<not description>"
         self._extract_info()
@@ -928,9 +833,7 @@ class Transaction:
         if len(self.lines) > 0:
             for line in self.lines:
                 if line.line_number_transaction == 0:
-                    self.type_transaction = (
-                        line.type_transaction if line.type_transaction else "<no type>"
-                    )
+                    self.type_transaction = line.type_transaction if line.type_transaction else "<no type>"
                     self.description = line.text_transaction
                     self.description_long = self.description
                 elif line.line_number_transaction and line.line_number_transaction >= 1:

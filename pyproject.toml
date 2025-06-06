@@ -1,11 +1,75 @@
 [project]
-name = "Bank Statements to Excel"
+name = "bank_statements_to_excel"
 version = "0.1.0"
 description = "Convert your bank statement PDFs into clean, structured Excel or CSV files with ease"
 readme = "README.md"
+authors = [
+    { name = "Jason Farrar", email = "stillwaters-technology@gmail.com" }
+]
 requires-python = ">=3.13"
 dependencies = [
+    "duckdb>=1.3.0",
     "openpyxl>=3.1.5",
     "pandas>=2.2.3",
     "pdfplumber>=0.11.6",
+    "polars[pyarrow]>=1.30.0",
+    "sqlglot>=26.24.0",
 ]
+
+[project.scripts]
+bstec = "bstec:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+      packages = ["src/bstec"]
+
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.0.1",
+    "ruff>=0.8.3",
+    "altair>=5.5.0",
+    "duckdb>=1.3.0",
+    "marimo>=0.13.15",
+    "matplotlib>=3.10.3",
+    "nbformat>=5.10.4",
+    "pytest>=8.3.5",
+    "python-lsp-server>=1.12.2",
+    "ruff>=0.11.12",
+    "sqlglot>=26.24.0",
+    "vegafusion>=2.0.2",
+    "vl-convert-python>=1.8.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["./src/bstec"]
+testpaths = ["tests", "marimo_template"]
+
+[tool.ruff]
+line-length = 140
+target-version = "py313"
+
+[tool.ruff.lint]
+select = [
+  "E", # pycodestyle
+  "F", # pyflakes
+  "I", # isort
+  "B", # flake8-bugbear
+]
+
+[tool.marimo.ai]
+rules = "- prefer polars over pandas\n- make charts using altair"
+
+[tool.marimo.save]
+autosave = "after_delay"
+autosave_delay = 1000
+format_on_save = true
+
+[tool.marimo.package_management]
+manager = "uv"
+
+[tool.marimo.runtime]
+pythonpath = ["./src/bstec"]

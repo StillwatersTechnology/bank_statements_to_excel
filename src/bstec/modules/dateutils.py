@@ -25,12 +25,10 @@ def make_date(date_str: str) -> date:
     date_str = date_str.replace(",", "")
     try:
         true_date = datetime.date(datetime.strptime(date_str, DATE_FORMAT))
-    except ValueError:
-        raise Exception(
-            f"'{date_str}' doesn't match the expected date format (e.g.'03 Jun 25')"
-        )
-    except TypeError:
-        raise Exception("No date provided to the make_date function")
+    except ValueError as err:
+        raise Exception(f"'{date_str}' doesn't match the expected date format (e.g.'03 Jun 25')") from err
+    except TypeError as err:
+        raise Exception("No date provided to the make_date function") from err
     return true_date
 
 
@@ -51,7 +49,12 @@ def last_date_from_previous_sheet(id_statement: UUID, sheet_number: int) -> date
     last_date: date = max(
         log_line["date"]
         for log_line in date_log
-        if log_line["id_statement"] == id_statement
-        and log_line["sheet_number"] == sheet_number - 1
+        if log_line["id_statement"] == id_statement and log_line["sheet_number"] == sheet_number - 1
     )  # type: ignore - this is only assigning the date pare of the dictionary so not sure why it's complaining!
+    if not last_date:
+        raise ValueError(
+            f"No previous sheet found for statement ID {id_statement} and sheet number {sheet_number - 1},"
+            "but transaction block date is required."
+        )
+    # If we have a date, return it
     return last_date

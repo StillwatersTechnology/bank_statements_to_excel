@@ -14,8 +14,6 @@ exports_csv/*
 !exports_csv/.gitkeep
 exports_excel/*
 !exports_excel/.gitkeep
-exports_db/*
-!exports_db/.gitkeep
 
 # Reports folder
 logs/*
