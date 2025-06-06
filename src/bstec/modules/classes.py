@@ -25,7 +25,10 @@ class Statement:
     """
     Represents a bank statement extracted from a PDF file.
 
-    The Statement class is responsible for parsing and storing information from a bank statement PDF, including account details, statement period, balances, and transaction summaries. Upon initialization, it processes the provided PDF file to extract relevant data such as account name, sort code, account number, statement date range, opening and closing balances, and total payments in and out. It also determines if the statement should be flagged as skipped (e.g., if no transaction blocks are found).
+    The Statement class is responsible for parsing and storing information from a bank statement PDF, including account details, statement
+    period, balances, and transaction summaries. Upon initialization, it processes the provided PDF file to extract relevant data such as
+    account name, sort code, account number, statement date range, opening and closing balances, and total payments in and out.
+    It also determines if the statement should be flagged as skipped (e.g., if no transaction blocks are found).
 
     Attributes:
         id (UUID): Unique identifier for the statement.
@@ -93,7 +96,7 @@ class Statement:
         Determines and sets the statement date range for the account.
 
         Finds the start and end dates of the statement period by searching through the pages for the first and last transaction blocks.
-        If both dates are found, sets `self.statement_date_from` to one day after the start date and `self.statement_date_to` to the end date.
+        If both dates are found, sets `self.statement_date_from` to one day after the start date and `self.statement_date_to` to end date.
         """
         start_date = next(
             (page.transaction_block.date_bbf for page in self.pages if page.transaction_block and page.transaction_block.is_first),
@@ -111,7 +114,11 @@ class Statement:
         """
         Extracts balance and payment information from the first page's lines.
 
-        This method scans through the lines of the first page in `self.pages` to find and extract the opening balance, payments in, payments out, and closing balance. It identifies each value by searching for specific keywords (`OPENING_BALANCE_LINE`, `PAYMENTS_IN_LINE`, `PAYMENTS_OUT_LINE`, `CLOSING_BALANCE_LINE`) in the line text. The method handles different currency symbols (such as "£", "$", "EUR") and removes commas from the extracted amounts. If a balance is marked as a debit (indicated by a trailing "D"), the value is converted to a negative number.
+        This method scans through the lines of the first page in `self.pages` to find and extract the opening balance, payments in, payments
+        out, and closing balance. It identifies each value by searching for specific keywords (`OPENING_BALANCE_LINE`, `PAYMENTS_IN_LINE`,
+        `PAYMENTS_OUT_LINE`, `CLOSING_BALANCE_LINE`) in the line text. The method handles different currency symbols
+        (such as "£", "$", "EUR") and removes commas from the extracted amounts. If a balance is marked as a debit
+        (indicated by a trailing "D"), the value is converted to a negative number.
 
         Attributes Set:
             self.opening_balance (float): The extracted opening balance, negative if marked as debit.
@@ -155,7 +162,7 @@ class Statement:
             - The second to last part as the sort code,
             - The remaining parts as the account name.
 
-        Assumes that the account information line contains at least four parts, with the last part being the sheet number (which is discarded).
+        Assumes that the account information line contains at least four parts, with last part being the sheet number, which is discarded.
 
         Sets:
             self.account_name (str): The extracted account name.
@@ -358,7 +365,8 @@ class Line:
         - `type_transaction`: The type of transaction, if recognized.
         - `text_transaction`: The narrative or description of the transaction.
 
-        The method also handles debit transactions indicated by a trailing "D" and parses currency values using a predefined pattern. If parsing fails at any step, the corresponding attribute may remain unset or set to a default value.
+        The method also handles debit transactions indicated by a trailing "D" and parses currency values using a predefined pattern.
+        If parsing fails at any step, the corresponding attribute may remain unset or set to a default value.
         """
         text_parts = self.text.split()
         debit_flag: bool = False
@@ -476,13 +484,20 @@ class TransactionBlock:
         self._extract_day_blocks()
 
     def __repr__(self):
-        return f"tblock: {self.id}; sheet: {self.page.sheet_number}; start_line: {self.start_line}; end_line: {self.end_line}; opening balance: {self.opening_balance}; closting balance: {self.closing_balance}"
+        return (
+            f"tblock: {self.id}; sheet: {self.page.sheet_number}; start_line: {self.start_line}; end_line: {self.end_line};"
+            f" opening balance: {self.opening_balance}; closing balance: {self.closing_balance}"
+        )
 
     def _extract_day_blocks(self):
         """
         Extracts and groups lines into day blocks within a transaction block.
 
-        This method iterates over the lines associated with the transaction block, grouping them into day blocks based on the presence of a date in each line. The first line of the transaction block always starts the first day block. If a line contains a date, it marks the beginning of a new day block. Each day block is assigned an opening balance, closing balance, and a date. The method also handles cases where the first line does not have a date by retrieving the last date from the previous sheet. At the end of each day block, a `DayBlock` object is created and appended to the `day_blocks` list, and relevant date information is logged.
+        This method iterates over the lines associated with the transaction block, grouping them into day blocks based on the presence of a
+        date in each line. The first line of the transaction block always starts the first day block. If a line contains a date, it marks
+        the beginning of a new day block. Each day block is assigned an opening balance, closing balance, and date. The method also handles
+        cases where the first line does not have a date by retrieving the last date from the previous sheet. At the end of each day block,
+        a `DayBlock` object is created and appended to the `day_blocks` list, and relevant date information is logged.
 
         Side Effects:
             - Modifies `self.day_blocks` by appending new `DayBlock` instances.
@@ -545,10 +560,6 @@ class TransactionBlock:
                         }
                     )
                     opening_balance = float(closing_balance)  # the closing balance becomes the opening balance for the next day block
-                    # except Exception:
-                    #     Exception(
-                    #         f"Error adding day block for statement: {self.page.id_statement}; sheet: {self.page.sheet_number}; date: {block_date}"
-                    #     )
 
     def _get_lines(self):
         """
@@ -682,17 +693,25 @@ class DayBlock:
         self._extract_transactions()
 
     def __repr__(self):
-        return f"day_block: {self.id}; t_block: {self.id_transaction_block}; date: {self.date}; opening_balance: {self.opening_balance}; closing_balance: {self.closing_balance}"
+        return (
+            f"day_block: {self.id}; t_block: {self.id_transaction_block}; date: {self.date};"
+            f" opening_balance: {self.opening_balance}; closing_balance: {self.closing_balance}"
+        )
 
     def _extract_transactions(self):
         """
         Extracts and groups lines into transactions, assigns transaction numbers, and calculates transaction values and balances.
 
-        This method processes the lines associated with the current object, grouping them into transactions based on the presence of a transaction type. For each transaction, it assigns line numbers, appends the transaction to the object's transaction list, and updates the transaction number. At the end of processing, it ensures the last transaction is added.
+        This method processes the lines associated with the current object, grouping them into transactions based on the presence of a
+        transaction type. For each transaction, it assigns line numbers, appends the transaction to the object's transaction list, and
+        updates the transaction number. At the end of processing, it ensures the last transaction is added.
 
-        After extracting transactions, it calculates the total movement (difference between closing and opening balances) and compares it to the sum of transaction values. If there is a mismatch, it attempts to correct the polarity of transactions with alternate values, retrying up to a maximum number of times. If the values still do not match, it raises an exception.
+        After extracting transactions, it calculates the total movement (difference between closing and opening balances) and compares it
+        to the sum of transaction values. If there is a mismatch, it attempts to correct the polarity of transactions with alternate values,
+        retrying up to a maximum number of times. If the values still do not match, it raises an exception.
 
-        Finally, it calculates and assigns the opening and closing balances for each transaction based on the day's opening balance and the cumulative transaction values.
+        Finally, it calculates and assigns the opening and closing balances for each transaction based on the day's opening balance and the
+        cumulative transaction values.
 
         Raises:
             Exception: If the sum of transaction values cannot be balanced with the calculated movement after polarity swaps.
@@ -774,7 +793,7 @@ class DayBlock:
                 print(value_transactions, movement)
                 raise Exception(f"cannot balance transactions for {self}")
 
-        # calculate the opening_balance and closing_balance of the transactions based on their value movement from the opening_balance of the day block
+        # calculate the opening_balance and closing_balance of transactions based on their value movement from opening_balance of day block
         running_balance: float = self.opening_balance if self.opening_balance else 0.0
         for transaction in self.transactions:
             transaction.opening_balance = running_balance
@@ -827,7 +846,11 @@ class Transaction:
         self.closing_balance: float = 0.0
 
     def __repr__(self):
-        return f"transaction: {self.id}; day_block: {self.id_day_block}; tr_number: {self.transaction_number}; date: {self.date_transaction}; type: {self.type_transaction}; description: {self.description}; value: {self.value}; value_alt: {self.value_alt}"
+        return (
+            f"transaction: {self.id}; day_block: {self.id_day_block}; tr_number: {self.transaction_number};"
+            f" date: {self.date_transaction}; type: {self.type_transaction}; description: {self.description};"
+            f" value: {self.value}; value_alt: {self.value_alt}"
+        )
 
     def _extract_info(self):
         if len(self.lines) > 0:

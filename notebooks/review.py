@@ -12,10 +12,10 @@ def setup_1():
     # imports
     import marimo as mo
     import matplotlib.pyplot as plt
+
     from bstec.modules import (
-        LOG_DIRECTORY,
         EXPORT_CSV_DIRECTORY,
-        STATEMENT_DIRECTORY,
+        LOG_DIRECTORY,
     )
 
     # # Get my_package directory path from Notebook
@@ -28,16 +28,8 @@ def setup_1():
 
     files_log = os.listdir(LOG_DIRECTORY)
     files_exports = os.listdir(EXPORT_CSV_DIRECTORY)
-    paths_log = [
-        os.path.join(LOG_DIRECTORY, basename)
-        for basename in files_log
-        if basename.endswith(".csv")
-    ]
-    paths_exports = [
-        os.path.join(EXPORT_CSV_DIRECTORY, basename)
-        for basename in files_exports
-        if basename.endswith(".csv")
-    ]
+    paths_log = [os.path.join(LOG_DIRECTORY, basename) for basename in files_log if basename.endswith(".csv")]
+    paths_exports = [os.path.join(EXPORT_CSV_DIRECTORY, basename) for basename in files_exports if basename.endswith(".csv")]
     latest_log = max(paths_log, key=os.path.getctime)
     latest_export = max(paths_exports, key=os.path.getctime)
     plt.rcParams["figure.figsize"] = [12, 6]
@@ -123,16 +115,12 @@ def _(df_credits_top10, plt):
     _fig, _ax = plt.subplots(figsize=(12, 6))
     _ax.spines["top"].set_visible(False)
     # Customize the plot
-    _ax.xaxis.set_major_formatter(
-        plt.matplotlib.ticker.StrMethodFormatter("{x:,.0f}")
-    )
+    _ax.xaxis.set_major_formatter(plt.matplotlib.ticker.StrMethodFormatter("{x:,.0f}"))
     _ax.set_title("Top 10 Credit Transactions by Description")
     _ax.set_xlabel("Value")
     _ax.set_ylabel("Transaction Description")
     _ax.grid(True, linestyle="--", alpha=0.7)
-    _ax.barh(
-        df_credits_top10.description, df_credits_top10.Credit_Value, color="navy"
-    )
+    _ax.barh(df_credits_top10.description, df_credits_top10.Credit_Value, color="navy")
     return
 
 
@@ -149,16 +137,12 @@ def _(df_debits_top10, plt):
     _fig, _ax = plt.subplots(figsize=(12, 6))
     _ax.spines["top"].set_visible(False)
     # Customize the plot
-    _ax.xaxis.set_major_formatter(
-        plt.matplotlib.ticker.StrMethodFormatter("{x:,.0f}")
-    )
+    _ax.xaxis.set_major_formatter(plt.matplotlib.ticker.StrMethodFormatter("{x:,.0f}"))
     _ax.set_title("Top 10 Debit Transactions by Description")
     _ax.set_xlabel("Value")
     _ax.set_ylabel("Transaction Description")
     _ax.grid(True, linestyle="--", alpha=0.7)
-    _ax.barh(
-        df_debits_top10.description, df_debits_top10.Debit_Value, color="navy"
-    )
+    _ax.barh(df_debits_top10.description, df_debits_top10.Debit_Value, color="navy")
     return
 
 
