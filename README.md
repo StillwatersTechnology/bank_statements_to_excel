@@ -72,14 +72,9 @@ If you have uv installed, make sure you are in the bank_statements_to_excel fold
 uv sync
 ```
 
-This should set up a virtual environment with all the dependencies and make sure the correct version of python is running within this project folder.  We're using a fairly new version of Python (currently 3.13), so your uv installation will need to be up-to-date.  If the 'uv sync' command can't find the correct python version, try updating uv like this:
+This should set up a virtual environment with all the dependencies and make sure the correct version of python is running within this project folder.
 
-```bash
-uv self update
-uv sync
-```
-
-If you're not using uv you'll need a python version of >= 3.13.  You can create your own virtual environment and use 'pip install' to set up your environment using the requirements.txt file.
+If you're not using uv you'll need a python version of >= 3.10.  You can create your own virtual environment and use 'pip install' to set up your environment using the requirements.txt file.
 From within the bank_statements_to_excel you can run:
 
 ```bash
@@ -95,12 +90,12 @@ Once your statement (or statements) are in the folder you can run the convertor:
 
 If you're using uv:
 ```bash
-uv run main.py
+uv run bstec
 ```
 
 Or, without uv:
 ```bash
-python main.py
+python src/bstec
 ```
 
 Follow the on-screen instructions.  Each statement will be converted and you'll see messages showing the results of all the balance checks.
@@ -120,7 +115,7 @@ Another possible point of failure may be overseas transactions, as these may lis
 
 ## Requirements
 
-- Python 3.13+
+- Python 3.10+
 - See [requirements.txt](requirements.txt) or [pyproject.toml](pyproject.toml) for dependencies. Alternatively, if you're using uv, you can run:
 
 ```bash
@@ -132,6 +127,11 @@ uv tree
 - We only have access to our own statements for testing so there could be format or transaction types that we have missed.  Please let us know if you experience issues and we'll contact you and try to resolve the issue.
 - Only supports English-language statements by default.
 - If a bank makes fundamental changes to the format of their pdf statements then this will break...  but we will try to mend it!
+
+## Export Formats Warning
+
+As we are at a very early stage of development, it is likely that the format of the export files will change frequently. If you are consuming the exports within a database or Excel, you should bear this in mind.  We will endeavbour to keep field names the same, but additional fields may be added to exports as required.  If the version number is 0.1.* we may add additional fields within the existing fields, or re-order the fields.  Once the version number reaches 0.2.* we will only tag new fields on to the end of existing fields and will not re-order. Once we reach version 1.0.0 the existing export formats and fields will remain fixed until the next major release. 
+
 
 ## Contributing
 
