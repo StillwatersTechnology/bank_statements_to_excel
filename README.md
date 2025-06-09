@@ -143,7 +143,7 @@ If you have am account listed in the [Compatible Statements](#compatible-stateme
 * What information, if any, is on your bank statements that we're not currently including in the excel and csv export files?
 * Do you have any other suggestions for improvements?
 
-Please raise issues for any feedback - thank you!
+Please raise issues for any feedback, and include details of your operating system and any steps required to reproduce bugs. Thank you!
 
 ### Development
 After the initial round of testing and feedback we'll publish a roadmap of enhancements and features, and this should assist anyone wishing to kindly contribute.  There may be a significant change in the structure of the project to facilitate the expansion of bank and statement coverage.  Initially it's thought this will involve a method of identifying the bank and account type from the raw pdf file, and then referencing a configuration file of specific markers to identify key blocks of data.
