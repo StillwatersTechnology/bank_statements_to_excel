@@ -1,35 +1,41 @@
-from dataclasses import dataclass
-from datetime import date, datetime
-from uuid import UUID
+from datetime import datetime
 
-import pandas as pd
+# import pandas as pd
+import polars as pl
 
 from .classes import Statement
-from .constants import EXPORT_CSV_DIRECTORY, EXPORT_EXCEL_DIRECTORY
+from .constants import EXPORT_CSV_DIRECTORY, EXPORT_EXCEL_DIRECTORY, LOG_DIRECTORY
+from .data_definitions import ExportColumns, ExportReportColumns, ExportResult
 
-
-@dataclass
-class ExportColumns:
-    id_transaction: UUID
-    id_statement: UUID
-    filename: str
-    account_name: str
-    account: str
-    statement_date: str
-    page_number: int
-    sheet_number: int
-    transaction_number: int
-    date_transaction: date
-    type_transaction: str
-    credit_debit: str
-    description: str
-    description_long: str
-    opening_balance: float
-    value: float
-    closing_balance: float
-
+export_report: list[ExportReportColumns] = []
 
 data_instances: list[ExportColumns] = []
+
+
+def update_export_report(stmt: Statement):
+    """
+    Updates the export report with the details of the given statement.
+
+    Appends an ExportReportColumns instance to the global export_report list,
+    capturing the statement's ID, filename, account name, account details,
+    statement date, opening balance, closing balance, and whether it was skipped.
+
+    Args:
+        stmt (Statement): The statement object containing the details to be recorded.
+        skipped (bool): Indicates if the statement was skipped due to no transactions.
+    """
+    export_report.append(
+        ExportReportColumns(
+            id_statement=stmt.id,
+            filename=stmt.filename,
+            account_name=stmt.account_name,
+            account=stmt.sort_code + " " + stmt.account_number,
+            statement_date=stmt.statement_date_desc,
+            opening_balance=stmt.opening_balance,
+            closing_balance=stmt.closing_balance,
+            skipped=stmt.skipped,
+        )
+    )
 
 
 # Prepare the data for export
@@ -76,36 +82,83 @@ def prepare_export_data(stmt: Statement):
 
 
 # Export the prepared data
-def export_data():
+def export_data(excel: bool = True, csv: bool = True) -> ExportResult:
     """
     Exports the current data instances to CSV and Excel files in dedicated export folders.
 
-    - Creates 'exports_csv' and 'exports_excel' directories if they do not exist.
     - If there are no data instances, prints a message and returns.
     - Otherwise, combines the data instances into a DataFrame and exports them:
         - As a CSV file in the 'exports_csv' folder.
         - As an Excel file in the 'exports_excel' folder.
     - Filenames include a timestamp to ensure uniqueness.
-    - Prints messages indicating the export status and file locations.
+    - writes messages to the result variable indicating the export status and file locations.
 
     Returns:
-        str: The timestamp used in the exported filenames, or None if no data was exported.
+        ExportResult: An instance containing the results of the export operation,
+        including file paths, success status, and any error messages.
     """
+    result: ExportResult = ExportResult()
+
     # Export to CSV and Excel
     if len(data_instances) == 0:
-        print("No data to export")
-        return
+        result.message = "No data to export"
+        result.is_export_successful = False
     else:
-        print("Combining statements and exporting to CSV and Excel files in the relevant export folders")
-        current_time: str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        df: pd.DataFrame = pd.DataFrame(data_instances)
-        df.to_csv(f"{EXPORT_CSV_DIRECTORY}/bank_transactions_{current_time}.csv", index=False)
-        df.to_excel(  # type: ignore
-            excel_writer=f"{EXPORT_EXCEL_DIRECTORY}/bank_transactions_{current_time}.xlsx",
-            index=False,
-        )
-        print(
-            f"Exported transactions to CSV and Excel files with timestamp: {current_time}. "
-            f"You can find them in the '{EXPORT_CSV_DIRECTORY}' and '{EXPORT_EXCEL_DIRECTORY}' folders."
-        )
-    return current_time
+        try:
+            current_time: str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            df: pl.DataFrame = pl.DataFrame(data_instances)
+            if excel:
+                export_file = f"{EXPORT_EXCEL_DIRECTORY}/bank_transactions_{current_time}.xlsx"
+                df.write_excel(export_file)
+                result.export_excel = export_file
+                result.message += f"Exported data to Excel file: {export_file}\n"
+            if csv:
+                export_file = f"{EXPORT_CSV_DIRECTORY}/bank_transactions_{current_time}.csv"
+                df.write_csv(export_file)
+                result.export_csv = export_file
+                result.message += f"Exported data to CSV file: {export_file}\n"
+            # Generate report
+            export_report_data(current_time, excel, csv, result)
+        except Exception as e:
+            print(df)
+            result.has_error = True
+            result.error_message = str(e)
+            result.message += "Error exporting data"
+            result.is_export_successful = False
+    return result
+
+
+def export_report_data(current_time, excel, csv, result) -> ExportResult:
+    """
+    Generates a report of the export process, including exporting the log to Excel and CSV files.
+    This function creates a DataFrame from the global export_report list and attempts to write it to
+    both Excel and CSV files in the specified log directory.
+    Args:
+        current_time (str): The current timestamp used for naming the export files.
+        excel (bool): Flag indicating whether to export the report to an Excel file.
+        csv (bool): Flag indicating whether to export the report to a CSV file.
+        result (ExportResult): The result object to store the export status and file paths.
+    Returns:
+        ExportResult: The updated result object containing the export status and file paths.
+    """
+    # Report generation
+    df = pl.DataFrame(export_report)
+    if excel:
+        try:
+            log_excel = f"{LOG_DIRECTORY}/log_excel_{current_time}.xlsx"
+            df.write_excel(log_excel)
+            result.log_excel = log_excel
+            result.message += f"Exported log to Excel file: {log_excel}\n"
+        except Exception as e:
+            result.is_log_successful = False
+            result.error_message += f"Error exporting log to Excel: {e}\n"
+    if csv:
+        try:
+            log_csv = f"{LOG_DIRECTORY}/log_csv_{current_time}.csv"
+            df.write_csv(log_csv)
+            result.log_csv = log_csv
+            result.error_message += f"Exported log to CSV file: {log_csv}\n"
+        except Exception as e:
+            result.is_log_successful = False
+            result.error_message += f"Error exporting log to CSV: {e}\n"
+    return result

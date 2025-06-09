@@ -24,7 +24,7 @@ This has been designed and tested on UK bank statements, but it may be compatibl
 - **Automated Quality Checks**: Tests to make sure all transaction values match against the movement between opening and closing statement balances
 - **Data privacy**: Processes files locally; no data leaves your machine. The process can be run with your computer fully off-line
 
-## Installation
+## Set-up & Usage
 
 ### Step 1 (Optional but recommended) - Install UV
 We use the wonderful [Astral's uv](https://github.com/astral-sh/uv) as a package manager, as this simplifies project dependencies and environments across users, developers, and operating systems.
@@ -134,6 +134,19 @@ As we are at a very early stage of development, it is likely that the format of 
 
 
 ## Contributing
+
+### Testing
+If you have am account listed in the [Compatible Statements](#compatible-statements), please give this project a try and let us know how you get on. Here are areas we're keen to get your thoughts on...
+* Did you manage to install and run, and was there anything we could make easier?
+* Are you happy with the command-line interface, or would you prefer a graphical user interface?
+* In our tests we processed 200 of our own statements in around 150 seconds.  Are you getting the same level of performance?
+* What information, if any, is on your bank statements that we're not currently including in the excel and csv export files?
+* Do you have any other suggestions for improvements?
+
+Please raise issues for any feedback - thank you!
+
+### Development
+After the initial round of testing and feedback we'll publish a roadmap of enhancements and features, and this should assist anyone wishing to kindly contribute.  There may be a significant change in the structure of the project to facilitate the expansion of bank and statement coverage.  Initially it's thought this will involve a method of identifying the bank and account type from the raw pdf file, and then referencing a configuration file of specific markers to identify key blocks of data.
 
 Pull requests and issue reports are welcome!
 

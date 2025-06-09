@@ -1,4 +1,4 @@
-from bstec.modules.dateutils import make_date
+from bstec.modules.utils import make_date
 
 """
 Test cases for the basic properties of various classes in the BSTEC module.

@@ -1,6 +1,6 @@
 from os import listdir
 
-import pandas as pd
+import polars as pl
 import pytest
 
 from bstec.modules import (
@@ -58,41 +58,42 @@ def test_export_data(mock_export_data):
     assert EXPORT_CSV_DIRECTORY.exists(), f"CSV export directory {EXPORT_CSV_DIRECTORY} does not exist."
     assert EXPORT_EXCEL_DIRECTORY.exists(), f"Excel export directory {EXPORT_EXCEL_DIRECTORY} does not exist."
 
-    export_time = export_data()  # Call the export function to create the files and return the timestamp
-    csv_filename = f"bank_transactions_{export_time}.csv"
-    excel_filename = f"bank_transactions_{export_time}.xlsx"
+    export_info = export_data()  # Call the export function to create the files and return the timestamp
+
+    file_csv = str(export_info.export_csv).replace(f"{EXPORT_CSV_DIRECTORY}/", "")
+    file_excel = str(export_info.export_excel).replace(f"{EXPORT_EXCEL_DIRECTORY}/", "")
 
     # Check if the CSV file was created
     csv_files = listdir(EXPORT_CSV_DIRECTORY)
-    assert csv_filename in csv_files, f"CSV file {csv_filename} does not exist."
+    assert file_csv in csv_files, f"CSV file {file_csv} does not exist."
 
     # Check if the Excel file was created
     excel_files = listdir(EXPORT_EXCEL_DIRECTORY)
-    assert excel_filename in excel_files, f"Excel file {excel_filename} does not exist."
+    assert file_excel in excel_files, f"Excel file {file_excel} does not exist."
 
     # Optionally, you can check the content of the files, but this is more complex and requires reading the files.
-    df_csv = pd.read_csv(f"{EXPORT_CSV_DIRECTORY}/{csv_filename}")
-    df_excel = pd.read_excel(f"{EXPORT_EXCEL_DIRECTORY}/{excel_filename}")
+    df_csv = pl.read_csv(export_info.export_csv)
+    df_excel = pl.read_excel(export_info.export_excel)
 
-    assert df_csv["description"].iloc[0] == mock_export_data[0].description  # Check if the first description matches the expected value
-    assert df_excel["description"].iloc[0] == mock_export_data[0].description  # Check if the first description matches the expected value
+    assert df_csv[0, "description"] == mock_export_data[0].description  # Check if the first description matches the expected value
+    assert df_excel[0, "description"] == mock_export_data[0].description  # Check if the first description matches the expected value
     assert (
-        df_csv["opening_balance"].iloc[5] == mock_export_data[5].opening_balance
+        df_csv[5, "opening_balance"] == mock_export_data[5].opening_balance
     )  # Check if the first opening balance matches the expected value
     assert (
-        df_excel["opening_balance"].iloc[5] == mock_export_data[5].opening_balance
+        df_excel[5, "opening_balance"] == mock_export_data[5].opening_balance
     )  # Check if the first opening balance matches the expected value
     assert len(df_csv) == len(mock_export_data), "CSV file should have the same number of rows as data instances."
     assert len(df_excel) == len(mock_export_data), "Excel file should have the same number of rows as data instances."
-    assert round(df_csv.closing_balance.iloc[4], 2) == round(mock_export_data[4].closing_balance, 2), (
+    assert round(df_csv[4, "closing_balance"], 2) == round(mock_export_data[4].closing_balance, 2), (
         "CSV file should have the correct closing balance for the 5th transaction."
     )
-    assert round(df_excel.closing_balance.iloc[4], 2) == round(mock_export_data[4].closing_balance, 2), (
+    assert round(df_excel[4, "closing_balance"], 2) == round(mock_export_data[4].closing_balance, 2), (
         "Excel file should have the correct closing balance for the 5th transaction."
     )
-    assert sum(round(df_csv.value, 2)) == sum([round(transaction.value, 2) for transaction in mock_export_data]), (
+    assert sum(df_csv["value"].round(2)) == sum([round(transaction.value, 2) for transaction in mock_export_data]), (
         "CSV file should have the correct total value."
     )
-    assert sum(round(df_excel.value, 2)) == sum([round(transaction.value, 2) for transaction in mock_export_data]), (
+    assert sum(df_excel["value"].round(2)) == sum([round(transaction.value, 2) for transaction in mock_export_data]), (
         "Excel file should have the correct total value."
     )

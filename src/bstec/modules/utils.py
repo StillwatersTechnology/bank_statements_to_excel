@@ -1,3 +1,6 @@
+import os
+import sys
+from contextlib import contextmanager
 from datetime import date, datetime
 from typing import Union
 from uuid import UUID
@@ -5,6 +8,17 @@ from uuid import UUID
 from .constants import DATE_FORMAT
 
 date_log: list[dict[str, Union[UUID, int, date]]] = []
+
+
+@contextmanager
+def suppress_stderr():
+    with open(os.devnull, "w") as devnull:
+        old_stderr = sys.stderr
+        sys.stderr = devnull
+        try:
+            yield
+        finally:
+            sys.stderr = old_stderr
 
 
 def make_date(date_str: str) -> date:

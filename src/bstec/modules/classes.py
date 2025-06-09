@@ -1,7 +1,7 @@
 import re
 from datetime import date, timedelta
 from random import randint
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from pdfplumber import open as pdf_open
 
@@ -18,7 +18,7 @@ from .constants import (
     POLARITY_SWAPS_MAX_TRIES,
     TRANSACTION_TYPES,
 )
-from .dateutils import date_log, last_date_from_previous_sheet, make_date
+from .utils import date_log, last_date_from_previous_sheet, make_date, suppress_stderr
 
 
 class Statement:
@@ -31,7 +31,7 @@ class Statement:
     It also determines if the statement should be flagged as skipped (e.g., if no transaction blocks are found).
 
     Attributes:
-        id (UUID): Unique identifier for the statement.
+        id (str): Unique identifier for the statement.
         filename (str): Path to the PDF file containing the statement.
         pages (list[Page]): List of Page objects representing each page of the statement.
         sort_code (str): Bank sort code extracted from the statement.
@@ -55,7 +55,7 @@ class Statement:
     """
 
     def __init__(self, filename: str):
-        self.id: UUID = uuid4()
+        self.id: str = str(uuid4())
         self.filename: str = filename
         self.pages: list[Page] = []
         self.sort_code: str = "<missing sort code>"
@@ -78,6 +78,9 @@ class Statement:
             if self.skipped
             else f"{self.statement_date_from:{DATE_FORMAT_DESC}} to {self.statement_date_to:{DATE_FORMAT_DESC}}"
         )  # human-readable description of the statement period
+
+    def __repr__(self):
+        return f"{self.account_name}\n{self.sort_code} {self.account_number}\n{self.statement_date_from} to {self.statement_date_to}\n"
 
     def _check_for_skipped(self):
         """
@@ -198,11 +201,12 @@ class Statement:
             Prints an error message if the PDF file cannot be opened or processed.
         """
         try:
-            with pdf_open(self.filename) as pdf:
-                for page in pdf.pages:
-                    text = page.extract_text()
-                    if text:
-                        self.pages.append(Page(page.page_number - 1, text, self.id))  # page number reduced by 1 to make it zero indexed
+            with suppress_stderr():
+                with pdf_open(self.filename) as pdf:
+                    for page in pdf.pages:
+                        text = page.extract_text()
+                        if text:
+                            self.pages.append(Page(page.page_number - 1, text, self.id))  # page number reduced by 1 to make it zero indexed
         except Exception as e:
             print(f"Error opening or processing PDF file '{self.filename}': {e}")
 
@@ -212,8 +216,8 @@ class Page:
     Represents a single page of a bank statement, encapsulating its text content, metadata, and extracted information.
 
     Attributes:
-        id (UUID): Unique identifier for the page.
-        id_statement (UUID): Identifier of the statement this page belongs to.
+        id (str): Unique identifier for the page.
+        id_statement (str): Identifier of the statement this page belongs to.
         page_number (int): The page number within the statement.
         text (str): The raw text content of the page.
         sheet_number (int): The extracted sheet number from the account information section (default -1 if not found).
@@ -221,7 +225,7 @@ class Page:
         transaction_block (TransactionBlock | None): Extracted transaction block if present, otherwise None.
 
     Methods:
-        __init__(page_number: int, text: str, id_statement: UUID):
+        __init__(page_number: int, text: str, id_statement: str):
             Initializes a Page instance, extracts lines, sheet number, and transaction block.
 
         _get_transaction_block():
@@ -234,9 +238,9 @@ class Page:
             Extracts the sheet number from the account information section of the page lines.
     """
 
-    def __init__(self, page_number: int, text: str, id_statement: UUID):  # type: ignore
-        self.id: UUID = uuid4()
-        self.id_statement: UUID = id_statement
+    def __init__(self, page_number: int, text: str, id_statement: str):  # type: ignore
+        self.id: str = str(uuid4())
+        self.id_statement: str = id_statement
         self.page_number: int = page_number
         self.text: str = text
         self.sheet_number: int = -1  # dummy sheet number
@@ -309,7 +313,7 @@ class Line:
     Represents a single line entry from a banking statement, encapsulating parsed transaction details.
 
     Attributes:
-        id (UUID): Unique identifier for the line.
+        id (str): Unique identifier for the line.
         line_number_page (int): The line number on the page.
         line_number_transaction_block (int | None): The line number within the transaction block, if applicable.
         line_number_day_block (int | None): The line number within the day block, if applicable.
@@ -333,7 +337,7 @@ class Line:
     """
 
     def __init__(self, text: str, line_number_page: int):
-        self.id: UUID = uuid4()
+        self.id: str = str(uuid4())
         self.line_number_page: int = line_number_page
         self.line_number_transaction_block: int | None = None
         self.line_number_day_block: int | None = None
@@ -440,8 +444,8 @@ class TransactionBlock:
     It extracts and organizes information such as opening and closing balances, the range of lines
     it covers, and further subdivides its lines into day blocks (DayBlock) based on transaction dates.
     Attributes:
-        id (UUID): Unique identifier for the transaction block.
-        id_page (UUID): Identifier of the associated Page.
+        id (str): Unique identifier for the transaction block.
+        id_page (str): Identifier of the associated Page.
         page (Page): The Page object this transaction block belongs to.
         page_number (int): The page number within the statement.
         opening_balance (float | None): The opening balance at the start of the block.
@@ -465,8 +469,8 @@ class TransactionBlock:
     """
 
     def __init__(self, Page: Page):
-        self.id: UUID = uuid4()
-        self.id_page: UUID = Page.id
+        self.id: str = str(uuid4())
+        self.id_page: str = Page.id
         self.page = Page
         self.page_number: int = Page.page_number
         self.opening_balance: float | None = None
@@ -656,8 +660,8 @@ class DayBlock:
     Represents a block of transactions for a specific day within a transaction block.
 
     Attributes:
-        id (UUID): Unique identifier for the DayBlock instance.
-        id_transaction_block (UUID): Identifier of the parent transaction block.
+        id (str): Unique identifier for the DayBlock instance.
+        id_transaction_block (str): Identifier of the parent transaction block.
         day_block_number (int): Sequential number of the day block within the transaction block.
         date (date): The date this day block represents.
         opening_balance (float | None): The opening balance for the day, if available.
@@ -675,17 +679,17 @@ class DayBlock:
 
     def __init__(
         self,
-        id_transaction_block: UUID,
+        id_transaction_block: str,
         day_block_number: int,
         date: date,
         opening_balance: float | None = None,
         closing_balance: float | None = None,
         lines: list[Line] | None = None,
     ):
-        self.id = uuid4()
-        self.id_transaction_block = id_transaction_block
+        self.id: str = str(uuid4())
+        self.id_transaction_block: str = id_transaction_block
         self.day_block_number: int = day_block_number
-        self.date = date
+        self.date: date = date
         self.opening_balance: float | None = opening_balance
         self.closing_balance: float | None = closing_balance
         self.lines: list[Line] | None = lines
@@ -806,8 +810,8 @@ class Transaction:
     Represents a financial transaction consisting of one or more lines within a day block.
 
     Attributes:
-        id (UUID): Unique identifier for the transaction.
-        id_day_block (UUID): Identifier for the associated day block.
+        id (str): Unique identifier for the transaction.
+        id_day_block (str): Identifier for the associated day block.
         transaction_number (int): Sequential number of the transaction within the day block.
         date_transaction (date): Date of the transaction.
         lines (list[Line]): List of Line objects representing the transaction's details.
@@ -826,13 +830,13 @@ class Transaction:
 
     def __init__(
         self,
-        id_day_block: UUID,
+        id_day_block: str,
         transaction_number: int,
         date_transaction: date,
         lines: list[Line],
     ):
-        self.id: UUID = uuid4()
-        self.id_day_block: UUID = id_day_block
+        self.id: str = str(uuid4())
+        self.id_day_block: str = id_day_block
         self.transaction_number: int = transaction_number
         self.date_transaction: date = date_transaction
         self.lines: list[Line] = lines

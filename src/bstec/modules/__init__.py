@@ -1,3 +1,4 @@
+from .checks import consistency_checks  # noqa: F401
 from .classes import Statement  # noqa: F401
 from .constants import (  # noqa: F401
     EXPORT_CSV_DIRECTORY,
@@ -8,4 +9,4 @@ from .constants import (  # noqa: F401
     STATEMENT_DIRECTORY,
     TEST_DIRECTORY,
 )
-from .exports import data_instances, export_data, prepare_export_data  # noqa: F401
+from .exports import data_instances, export_data, export_report, prepare_export_data, update_export_report  # noqa: F401
